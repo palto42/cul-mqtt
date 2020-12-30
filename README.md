@@ -9,8 +9,10 @@ Tested on Linux and with openhab2.
 
 Use the setup script to install:
 
-    python setup.py install
-  
+```sh
+python setup.py install
+```
+
 ## Usage
 
 The setup script installs the `cul-mqtt` command line program.
