@@ -4,31 +4,61 @@ import logging
 from culmqtt.culmqtt import CULMQTT
 
 
-
-class VAction(argparse.Action):
-    """
-    Verbosity flag action. Original source:
-      http://stackoverflow.com/a/6076779/5480526
-    """
-    def __call__(self, parser, args, values, option_string=None):
-        if values == None:
-            values = "1"
-        try:
-            values = int(values)
-        except ValueError:
-            values = values.count("v") + 1
-        setattr(args, self.dest, values)
-
-
-
 def prepare_parser(parser):
-    parser.add_argument("--device", type=str, default="/dev/ttyUSB0")
-    parser.add_argument("--broker", type=str, default="localhost")
-    parser.add_argument("--topic", type=str, default="cul")
-    parser.add_argument("--clientid", type=str, default="cul")
-    parser.add_argument("--delayms", type=int, default=500)
-    parser.add_argument('-v', nargs='?', action=VAction, dest="verbose")
-    
+    parser.add_argument(
+        "-d",
+        "--device",
+        type=str,
+        default="/dev/ttyUSB0",
+        help="Port to of the CUL device",
+    )
+    parser.add_argument(
+        "-b",
+        "--broker",
+        type=str,
+        default="localhost",
+        help="IP address of the MQTT broker",
+    )
+    parser.add_argument(
+        "-t",
+        "--topic",
+        type=str,
+        default="cul",
+        help="MQTT topic for this CULT device",
+    )
+    parser.add_argument(
+        "-c", "--clientid", type=str, default="cul", help="MQTT client ID"
+    )
+    parser.add_argument(
+        "-u",
+        "--username",
+        type=str,
+        default=None,
+        help="MQTT broker user name (optional)",
+    )
+    parser.add_argument(
+        "-p",
+        "--password",
+        type=str,
+        default=None,
+        help="MQTT broker password name (optional)",
+    )
+    parser.add_argument(
+        "-D",
+        "--delayms",
+        type=int,
+        default=500,
+        help="Delay after sending a message via CUL",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        dest="verbose",
+        default=0,
+        help="Verbose or extra verbose (2x) logging",
+    )
+
 
 def run_program(parser):
     config = vars(parser.parse_args())
@@ -42,15 +72,19 @@ def run_program(parser):
     logger = logging.getLogger("cul-mqtt")
     logger.setLevel(log_level)
     # run
-    c = CULMQTT(config["device"], config["broker"],
-                mqtt_client_id=config["clientid"],
-                mqtt_topic=config["topic"],
-                delay_send=config["delayms"]/1000.0,
-                log_level=log_level)
+    c = CULMQTT(
+        config["device"],
+        config["broker"],
+        mqtt_client_id=config["clientid"],
+        mqtt_topic=config["topic"],
+        username=config["username"],
+        password=config["password"],
+        delay_send=config["delayms"] / 1000.0,
+        log_level=log_level,
+    )
     c.start()
-    
-    
-    
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CUL to MQTT bridge.")
     prepare_parser(parser)

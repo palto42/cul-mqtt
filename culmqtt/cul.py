@@ -3,6 +3,7 @@ import logging
 import os
 import select
 import time
+import sys
 
 
 def read_from_fd(fd):
@@ -13,24 +14,28 @@ def read_from_fd(fd):
 
 
 class CUL(object):
-    
     def __init__(self, serial_port, log_level=logging.ERROR):
         super(CUL, self).__init__()
+        self._logger = logging.getLogger("cul-mqtt.CUL")
+        self._logger.setLevel(log_level)
         self._port = serial_port
-        self._fd = os.open(self._port, os.O_RDWR)
+        try:
+            self._fd = os.open(self._port, os.O_RDWR)
+        except FileNotFoundError:
+            self._logger.error("Device {0} not available.".format(self._port))
+            sys.exit(1)
         # initialize
         os.write(self._fd, b"V\n")
         time.sleep(1)
         os.write(self._fd, b"V\n")
         time.sleep(2)
-        self._logger = logging.getLogger("cul-mqqt.CUL")
-        self._logger.setLevel(log_level)
         self._logger.info("CUL configured and ready.")
         self._logger.debug("Using serial port {0}.".format(serial_port))
-        
+
     def __del__(self):
-        os.close(self._fd)
-        
+        if hasattr(self, "_fd"):
+            os.close(self._fd)
+
     def send(self, msg):
         if type(msg) == bytes:
             msg = msg.decode("ascii")
@@ -39,7 +44,7 @@ class CUL(object):
         os.set_blocking(self._fd, True)
         os.write(self._fd, msg.encode("ascii"))
         self._logger.debug("Message transmitted: '{0}'.".format(msg.strip()))
-        
+
     def recv(self):
         rin, _, _ = select.select([self._fd], [], [], 0)
         if rin:
