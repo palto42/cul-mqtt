@@ -20,6 +20,13 @@ def prepare_parser(parser):
         help="IP address of the MQTT broker",
     )
     parser.add_argument(
+        "-P",
+        "--port",
+        type=str,
+        default=None,
+        help="TCP port of the MQTT broker",
+    )
+    parser.add_argument(
         "-t",
         "--topic",
         type=str,
@@ -55,6 +62,11 @@ def prepare_parser(parser):
         help="Path to TLS certificates for MQTT broker connection",
     )
     parser.add_argument(
+        "--insecure",
+        action="store_true",
+        help="Allow insecure connection (no CA certificate validation)",
+    )
+    parser.add_argument(
         "-D",
         "--delayms",
         type=int,
@@ -82,14 +94,17 @@ def run_program(parser):
     logger = logging.getLogger("cul-mqtt")
     logger.setLevel(log_level)
     # run
+    logger.debug("CLI arguments: %s", config)
     c = CULMQTT(
         config["device"],
         config["broker"],
+        mqtt_port=config["port"],
         mqtt_client_id=config["clientid"],
         mqtt_topic=config["topic"],
         username=config["username"],
         password=config["password"],
         ca_certs=config["ca_certs"],
+        tls_insecure=config["insecure"],
         delay_send=config["delayms"] / 1000.0,
         log_level=log_level,
     )

@@ -12,6 +12,7 @@ class CULMQTT(object):
         self,
         cul_port,
         mqtt_broker,
+        mqtt_port=None,
         mqtt_client_id="cul",
         mqtt_topic="cul",
         username=None,
@@ -25,12 +26,19 @@ class CULMQTT(object):
         super(CULMQTT, self).__init__()
         self._cul_port = cul_port
         self._mqtt_broker = mqtt_broker
+        if mqtt_port:
+            self._mqtt_port = int(mqtt_port)
+        elif ca_certs:
+            self._mqtt_port = 8883
+        else:
+            self._mqtt_port = 1883
         self._mqtt_client_id = mqtt_client_id
         self._mqtt_topic = mqtt_topic
         self._username = username
         self._password = password
         self._ca_certs = ca_certs
         self._tls_version = tls_version
+        self._tls_insecure = tls_insecure
         self._delay_send = delay_send
         self._log_level = log_level
         self._send_queue = []
@@ -59,7 +67,7 @@ class CULMQTT(object):
             self._client.username_pw_set(self._username, self._password)
         self._client.on_message = self.on_mqtt_recv
         self._client.on_connect = self.on_mqtt_connect
-        if self._tls_set:
+        if self._ca_certs:
             self._client.tls_set(
                 ca_certs=self._ca_certs,
                 certfile=None,
@@ -70,9 +78,15 @@ class CULMQTT(object):
             )
             self._client.tls_insecure_set(self._tls_insecure)
         try:
-            self._client.connect(self._mqtt_broker, 1883)
+            self._client.connect(self._mqtt_broker, self._mqtt_port)
         except ConnectionRefusedError:
             self._logger.error("MQTT connection to port 1883 refused.")
+            sys.exit(1)
+        except ConnectionResetError as e:
+            self._logger.error("MQTT connection to %s failed: %s", self._mqtt_broker, e.reason)
+            sys.exit(1)
+        except ssl.SSLCertVerificationError as e:
+            self._logger.error("TLS certificate for MQTT connection invalid: %s", e.verify_message)
             sys.exit(1)
         except socket.gaierror:
             self._logger.error("Name or service '{}' not known".format(self._mqtt_broker))

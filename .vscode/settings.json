@@ -3,6 +3,7 @@
         "CULMQTT",
         "RDWR",
         "clientid",
+        "culfw",
         "cultemp",
         "delayms",
         "gaierror",
