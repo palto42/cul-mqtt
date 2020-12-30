@@ -1,8 +1,10 @@
-# -*- coding: utf-8 -*-
 import logging
 import paho.mqtt.client as paho
 import time
 from .cul import CUL
+import ssl
+import sys
+import socket
 
 
 class CULMQTT(object):
@@ -12,8 +14,11 @@ class CULMQTT(object):
         mqtt_broker,
         mqtt_client_id="cul",
         mqtt_topic="cul",
-        username="",
-        password="",
+        username=None,
+        password=None,
+        ca_certs=None,
+        tls_version=ssl.PROTOCOL_TLSv1_2,
+        tls_insecure=False,  # True = no CA check
         delay_send=0.05,
         log_level=logging.ERROR,
     ):
@@ -24,6 +29,8 @@ class CULMQTT(object):
         self._mqtt_topic = mqtt_topic
         self._username = username
         self._password = password
+        self._ca_certs = ca_certs
+        self._tls_version = tls_version
         self._delay_send = delay_send
         self._log_level = log_level
         self._send_queue = []
@@ -52,7 +59,24 @@ class CULMQTT(object):
             self._client.username_pw_set(self._username, self._password)
         self._client.on_message = self.on_mqtt_recv
         self._client.on_connect = self.on_mqtt_connect
-        self._client.connect(self._mqtt_broker, 1883)
+        if self._tls_set:
+            self._client.tls_set(
+                ca_certs=self._ca_certs,
+                certfile=None,
+                keyfile=None,
+                cert_reqs=ssl.CERT_REQUIRED,
+                tls_version=self._tls_version,
+                ciphers=None,
+            )
+            self._client.tls_insecure_set(self._tls_insecure)
+        try:
+            self._client.connect(self._mqtt_broker, 1883)
+        except ConnectionRefusedError:
+            self._logger.error("MQTT connection to port 1883 refused.")
+            sys.exit(1)
+        except socket.gaierror:
+            self._logger.error("Name or service '{}' not known".format(self._mqtt_broker))
+            sys.exit(1)
         self._client.loop_start()
         self._logger.info("MQTT transport configured.")
         self._logger.debug("Broker is '{0}'.".format(self._mqtt_broker))

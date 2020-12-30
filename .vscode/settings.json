@@ -5,8 +5,10 @@
         "clientid",
         "cultemp",
         "delayms",
+        "gaierror",
         "mqtt",
         "nargs",
-        "paho"
+        "paho",
+        "reqs"
     ]
 }

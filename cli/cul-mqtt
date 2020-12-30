@@ -27,7 +27,11 @@ def prepare_parser(parser):
         help="MQTT topic for this CULT device",
     )
     parser.add_argument(
-        "-c", "--clientid", type=str, default="cul", help="MQTT client ID"
+        "-i",
+        "--clientid",
+        type=str,
+        default="cul",
+        help="MQTT client ID"
     )
     parser.add_argument(
         "-u",
@@ -44,6 +48,13 @@ def prepare_parser(parser):
         help="MQTT broker password name (optional)",
     )
     parser.add_argument(
+        "-c",
+        "--ca-certs",
+        type=str,
+        default=None,
+        help="Path to TLS certificates for MQTT broker connection",
+    )
+    parser.add_argument(
         "-D",
         "--delayms",
         type=int,
@@ -54,7 +65,6 @@ def prepare_parser(parser):
         "-v",
         "--verbose",
         action="count",
-        dest="verbose",
         default=0,
         help="Verbose or extra verbose (2x) logging",
     )
@@ -79,6 +89,7 @@ def run_program(parser):
         mqtt_topic=config["topic"],
         username=config["username"],
         password=config["password"],
+        ca_certs=config["ca_certs"],
         delay_send=config["delayms"] / 1000.0,
         log_level=log_level,
     )
