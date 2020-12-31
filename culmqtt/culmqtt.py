@@ -5,6 +5,10 @@ from .cul import CUL
 import ssl
 import sys
 import socket
+from culmqtt.app_status import AppStatus
+
+
+app_status = AppStatus()
 
 
 class CULMQTT(object):
@@ -72,7 +76,9 @@ class CULMQTT(object):
         if self._tls:
             if self._tls_insecure:
                 cert_reqs = ssl.CERT_NONE
-                self._logger.warning("Will connect to MQTT broker without SSL certificate validation!")
+                self._logger.warning(
+                    "Will connect to MQTT broker without SSL certificate validation!"
+                )
             else:
                 cert_reqs = ssl.CERT_REQUIRED
             self._client.tls_set(
@@ -87,7 +93,9 @@ class CULMQTT(object):
         try:
             self._client.connect(self._mqtt_broker, self._mqtt_port)
         except ConnectionRefusedError:
-            self._logger.error("MQTT connection to port %s refused.", self._mqtt_port)
+            self._logger.error(
+                "MQTT connection to port %s refused.", self._mqtt_port
+            )
             sys.exit(1)
         except ConnectionResetError as e:
             self._logger.error(
@@ -110,15 +118,19 @@ class CULMQTT(object):
         self._logger.debug("Broker is '%s'.", self._mqtt_broker)
         self._logger.debug("Client id is '%s'.", self._mqtt_client_id)
         self._logger.debug(
-            "Listening for messages with topic '%s/send'.",
-            self._mqtt_topic
+            "Listening for messages with topic '%s/send'.", self._mqtt_topic
         )
         self._logger.debug(
             "Incoming messages will be published to '%s/recv'.",
-            self._mqtt_topic
+            self._mqtt_topic,
         )
         # handle incoming RF transmission
         while self._run:
+            print("status", app_status.run)
+            if not app_status.run:
+                self._run = False
+                print("stop", self._run)
+                return
             time.sleep(0.05)
             rf_msg = self._cul.recv()
             if rf_msg:
@@ -130,11 +142,12 @@ class CULMQTT(object):
             if self._send_queue:
                 mqtt_msg = self._send_queue.pop(0)
                 self._cul.send(mqtt_msg)
-                self._logger.debug(
-                    "Queue length: %s.", len(self._send_queue)
-                )
+                self._logger.debug("Queue length: %s.", len(self._send_queue))
                 time.sleep(self._delay_send)
 
     def stop(self):
         self._run = False
         self._logger.info("Stopping CULmqtt")
+
+    def status(self):
+        return self._run

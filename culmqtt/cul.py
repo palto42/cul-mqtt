@@ -6,7 +6,9 @@ from serial import Serial
 
 
 class CUL(object):
-    def __init__(self, serial_port, serial_speed=38400, log_level=logging.ERROR):
+    def __init__(
+        self, serial_port, serial_speed=38400, log_level=logging.ERROR
+    ):
         super(CUL, self).__init__()
         self._logger = logging.getLogger("cul-mqtt.CUL")
         self._logger.setLevel(log_level)

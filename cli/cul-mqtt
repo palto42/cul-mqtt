@@ -2,7 +2,7 @@
 import argparse
 import logging
 from culmqtt.culmqtt import CULMQTT
-import signal
+from culmqtt.app_status import AppStatus
 
 
 def prepare_parser(parser):
@@ -89,16 +89,8 @@ def prepare_parser(parser):
 
 
 def run_program(parser):
-
-    def stop_culmqtt(sig_num, frame):
-        # stop event scheduler
-        logger.warning(
-            "CULmqtt was interrupted by signal '%s'",
-            signal.Signals(sig_num).name
-        )
-        cul_mqtt.stop()
-        logger.warning("CULmqtt has been stopped, bye...")
-        exit(sig_num)
+    # Initialise AppStatus
+    app_status = AppStatus()
 
     config = vars(parser.parse_args())
     # prepare logging
@@ -126,9 +118,7 @@ def run_program(parser):
         delay_send=config["delayms"] / 1000.0,
         log_level=log_level,
     )
-    # Add signal handler to gracefully terminate cul_mqtt
-    signal.signal(signal.SIGINT, stop_culmqtt)
-    signal.signal(signal.SIGTERM, stop_culmqtt)
+    app_status.add_app(cul_mqtt)
     cul_mqtt.start()
 
 
