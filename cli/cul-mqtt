@@ -2,6 +2,7 @@
 import argparse
 import logging
 from culmqtt.culmqtt import CULMQTT
+import signal
 
 
 def prepare_parser(parser):
@@ -55,6 +56,11 @@ def prepare_parser(parser):
         help="MQTT broker password name (optional)",
     )
     parser.add_argument(
+        "--tls",
+        action="store_true",
+        help="Connect to MQTT broker with TLS encryption",
+    )
+    parser.add_argument(
         "-c",
         "--ca-certs",
         type=str,
@@ -83,6 +89,17 @@ def prepare_parser(parser):
 
 
 def run_program(parser):
+
+    def stop_culmqtt(sig_num, frame):
+        # stop event scheduler
+        logger.warning(
+            "CULmqtt was interrupted by signal '%s'",
+            signal.Signals(sig_num).name
+        )
+        cul_mqtt.stop()
+        logger.warning("CULmqtt has been stopped, bye...")
+        exit(sig_num)
+
     config = vars(parser.parse_args())
     # prepare logging
     log_level = logging.ERROR
@@ -90,12 +107,12 @@ def run_program(parser):
         log_level = logging.INFO
     elif config["verbose"] and config["verbose"] >= 2:
         log_level = logging.DEBUG
-    logging.basicConfig()
+    logging.basicConfig(format="%(levelname)s : %(name)s : %(message)s",)
     logger = logging.getLogger("cul-mqtt")
     logger.setLevel(log_level)
     # run
     logger.debug("CLI arguments: %s", config)
-    c = CULMQTT(
+    cul_mqtt = CULMQTT(
         config["device"],
         config["broker"],
         mqtt_port=config["port"],
@@ -103,12 +120,16 @@ def run_program(parser):
         mqtt_topic=config["topic"],
         username=config["username"],
         password=config["password"],
+        tls=config["tls"],
         ca_certs=config["ca_certs"],
         tls_insecure=config["insecure"],
         delay_send=config["delayms"] / 1000.0,
         log_level=log_level,
     )
-    c.start()
+    # Add signal handler to gracefully terminate cul_mqtt
+    signal.signal(signal.SIGINT, stop_culmqtt)
+    signal.signal(signal.SIGTERM, stop_culmqtt)
+    cul_mqtt.start()
 
 
 if __name__ == "__main__":

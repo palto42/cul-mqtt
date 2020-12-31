@@ -21,15 +21,28 @@ class CUL(object):
         try:
             self._fd = os.open(self._port, os.O_RDWR)
         except FileNotFoundError:
-            self._logger.error("Device {0} not available.".format(self._port))
+            self._logger.error("Device %s not available.", self._port)
             sys.exit(1)
         # initialize
         os.write(self._fd, b"V\n")
-        time.sleep(1)
-        os.write(self._fd, b"V\n")
-        time.sleep(2)
-        self._logger.info("CUL configured and ready.")
-        self._logger.debug("Using serial port {0}.".format(serial_port))
+        time.sleep(0.1)
+        response = self.recv()
+        if not response or b"CUL" not in response:  # retry
+            os.write(self._fd, b"V\n")
+            time.sleep(1)
+            response = self.recv()
+        if response and b"CUL" in response:
+            self._logger.info(
+                "CUL configured and ready: %s", response.strip().decode()
+            )
+            self._logger.debug("Using serial port %s.", serial_port)
+        else:
+            self._logger.error(
+                "Connection to CUL on port %s failed. Received response: '%s'",
+                serial_port,
+                response.strip(),
+            )
+            sys.exit(1)
 
     def __del__(self):
         if hasattr(self, "_fd"):
@@ -42,13 +55,13 @@ class CUL(object):
             msg += "\n"
         os.set_blocking(self._fd, True)
         os.write(self._fd, msg.encode("ascii"))
-        self._logger.debug("Message transmitted: '{0}'.".format(msg.strip()))
+        self._logger.debug("Message transmitted: '%s'.", msg.strip())
 
     def recv(self):
         rin, _, _ = select.select([self._fd], [], [], 0)
         if rin:
             fd = rin[0]
             msg = read_from_fd(fd)
-            self._logger.debug("Message received: '{0}'.".format(msg.strip()))
+            self._logger.debug("Message received: '%s'.", msg.strip())
             return msg
         return None
