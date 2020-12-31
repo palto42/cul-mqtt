@@ -5,7 +5,7 @@ OnFailure=notify-email@%i.service
 
 [Service]
 Type=simple
-ExecStart=/opt/cul-mqtt/cli/cul-mqtt -d /dev/ttyUSB0 --tls -c /path/to/certificate -u USERNAME -p PASSWORD -b mqtt.server -v
+ExecStart=/opt/cul-mqtt/bin/cul-mqtt -d /dev/%i --tls -c /path/to/certificate -u USERNAME -p PASSWORD -b mqtt.server -v
 User=scriptuser
 
 [Install]

@@ -40,7 +40,7 @@ class CUL(object):
             self._logger.error(
                 "Connection to CUL on port %s failed. Received response: '%s'",
                 serial_port,
-                response.strip(),
+                response.strip() if response else "",
             )
             sys.exit(1)
 
