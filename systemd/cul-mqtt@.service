@@ -1,0 +1,12 @@
+[Unit]
+Description=CUL MQTT service
+After=network-online.target
+OnFailure=notify-email@%i.service
+
+[Service]
+Type=simple
+ExecStart=/opt/cul-mqtt/cli/cul-mqtt -d /dev/ttyUSB0 --tls -c /path/to/certificate -u USERNAME -p PASSWORD -b mqtt.server -v
+User=scriptuser
+
+[Install]
+WantedBy=multi-user.target

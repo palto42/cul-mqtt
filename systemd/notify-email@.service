@@ -1,0 +1,6 @@
+[Unit]
+Description=Send notification email 
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '/bin/systemctl status %i | /usr/bin/mailx -s "[SYSTEMD_%i] Fail" user@mail.server.address'
