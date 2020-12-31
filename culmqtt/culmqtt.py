@@ -5,6 +5,7 @@ from .cul import CUL
 import ssl
 import sys
 import socket
+import threading
 from culmqtt.app_status import AppStatus
 
 
@@ -124,13 +125,12 @@ class CULMQTT(object):
             "Incoming messages will be published to '%s/recv'.",
             self._mqtt_topic,
         )
+        self._thread = threading.Thread(target=self.run)
+        self._thread.start()
+
+    def run(self):
         # handle incoming RF transmission
         while self._run:
-            print("status", app_status.run)
-            if not app_status.run:
-                self._run = False
-                print("stop", self._run)
-                return
             time.sleep(0.05)
             rf_msg = self._cul.recv()
             if rf_msg:
@@ -144,10 +144,23 @@ class CULMQTT(object):
                 self._cul.send(mqtt_msg)
                 self._logger.debug("Queue length: %s.", len(self._send_queue))
                 time.sleep(self._delay_send)
+        self._run = False
 
     def stop(self):
+        timeout = 1.0
+        self._logger.debug("Stop culmqtt thread")
         self._run = False
-        self._logger.info("Stopping CULmqtt")
+        self._thread.join(timeout)
+        del self._cul
+        self._client.disconnect()
+        if self._thread.is_alive():
+            self._logger.error(
+                "Failed to stop CULmqtt thread within %s seconds", timeout
+            )
+            return False
+        else:
+            self._logger.info("Stopped CULmqtt thread")
+            return True
 
     def status(self):
-        return self._run
+        return self._thread.is_alive()

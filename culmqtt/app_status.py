@@ -1,6 +1,5 @@
 import logging
 import signal
-from time import sleep
 
 
 class AppStatus(object):
@@ -32,21 +31,12 @@ class AppStatus(object):
             "The program was interrupted by signal '%s'",
             signal.Signals(sig_num).name,
         )
-        self.run = False
-        running = True
-        while self._timeout > 0 and running:
-            print("wait", self._timeout)
-            running = False
-            for app in self._apps:
-                print("app", app.status())
-                running |= app.status()
-            sleep(1)
-            self._timeout -= 1
-        if running:
-            self._logger.error(
-                "Program apps hasn't terminated within %s seconds, exit anyway",
-                self._timeout,
-            )
-        else:
+        terminated = True
+        for app in self._apps:
+            terminated &= app.stop()
+        if terminated:
             self._logger.warning("The program has been stopped, bye...")
-        exit(sig_num)
+        else:
+            self._logger.error(
+                "Program apps hasn't terminated within timeout, exit anyway"
+            )

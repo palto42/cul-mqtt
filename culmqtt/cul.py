@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 import sys
 from serial import Serial
@@ -40,8 +39,8 @@ class CUL(object):
             sys.exit(1)
 
     def __del__(self):
-        if hasattr(self, "_fd"):
-            os.close(self._fd)
+        if hasattr(self, "_ser"):
+            self._ser.close()
 
     def send(self, msg):
         if type(msg) == bytes:
