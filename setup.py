@@ -21,6 +21,6 @@ setup(
     ],
     python_requires=">=3.6",
     packages=["culmqtt"],
-    install_requires=["paho-mqtt"],
+    install_requires=["paho-mqtt", "pyserial"],
     scripts=["cli/cul-mqtt", "cli/start-cul-mqtt"],
 )

@@ -1,34 +1,27 @@
 import logging
 import os
-import select
 import time
 import sys
-
-
-def read_from_fd(fd):
-    result = b""
-    while not result.endswith(b"\n"):
-        result += os.read(fd, 1)
-    return result
+from serial import Serial
 
 
 class CUL(object):
-    def __init__(self, serial_port, log_level=logging.ERROR):
+    def __init__(self, serial_port, serial_speed=38400, log_level=logging.ERROR):
         super(CUL, self).__init__()
         self._logger = logging.getLogger("cul-mqtt.CUL")
         self._logger.setLevel(log_level)
         self._port = serial_port
         try:
-            self._fd = os.open(self._port, os.O_RDWR)
-        except FileNotFoundError:
-            self._logger.error("Device %s not available.", self._port)
+            self._ser = Serial(self._port, serial_speed, timeout=0.1)
+        except IOError as e:
+            self._logger.error("Can't access device %s : %s", self._port, e)
             sys.exit(1)
         # initialize
-        os.write(self._fd, b"V\n")
+        self._ser.write(b"V\n")
         time.sleep(0.1)
         response = self.recv()
         if not response or b"CUL" not in response:  # retry
-            os.write(self._fd, b"V\n")
+            self._ser.write(b"V\n")
             time.sleep(1)
             response = self.recv()
         if response and b"CUL" in response:
@@ -53,15 +46,12 @@ class CUL(object):
             msg = msg.decode("ascii")
         if not msg.endswith("\n"):
             msg += "\n"
-        os.set_blocking(self._fd, True)
-        os.write(self._fd, msg.encode("ascii"))
+        self._ser.write(msg.encode("ascii"))
         self._logger.debug("Message transmitted: '%s'.", msg.strip())
 
     def recv(self):
-        rin, _, _ = select.select([self._fd], [], [], 0)
-        if rin:
-            fd = rin[0]
-            msg = read_from_fd(fd)
+        if self._ser.in_waiting > 0:
+            msg = self._ser.read_until("\n", 100)
             self._logger.debug("Message received: '%s'.", msg.strip())
             return msg
         return None
