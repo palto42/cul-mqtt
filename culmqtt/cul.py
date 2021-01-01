@@ -2,6 +2,7 @@ import logging
 import time
 import sys
 from serial import Serial
+from culmqtt.app_status import AppStatus
 
 
 class CUL(object):
@@ -37,12 +38,20 @@ class CUL(object):
                 response.strip() if response else "",
             )
             sys.exit(1)
+        app_status = AppStatus()
+        app_status.add_app(self)
 
     def __del__(self):
+        self.stop()
+
+    def stop(self):
         if hasattr(self, "_ser"):
             self._ser.close()
+        return True
 
     def send(self, msg):
+        if not msg:
+            return
         if type(msg) == bytes:
             msg = msg.decode("ascii")
         if not msg.endswith("\n"):

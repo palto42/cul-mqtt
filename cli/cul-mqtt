@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import argparse
 import logging
+import sys
+from culmqtt.cul import CUL
+from culmqtt.mqtt import MQTT
 from culmqtt.culmqtt import CULMQTT
-from culmqtt.app_status import AppStatus
 
 
 def prepare_parser(parser):
@@ -31,8 +33,15 @@ def prepare_parser(parser):
         "-t",
         "--topic",
         type=str,
-        default="cul",
-        help="MQTT topic for this CULT device",
+        default="serial-bridge",
+        help="MQTT topic for this service",
+    )
+    parser.add_argument(
+        "-s",
+        "--sub-topic",
+        type=str,
+        default=None,
+        help="MQTT sub-topic for the CUL device (if not specified, use device name)",
     )
     parser.add_argument(
         "-i",
@@ -89,9 +98,6 @@ def prepare_parser(parser):
 
 
 def run_program(parser):
-    # Initialise AppStatus
-    app_status = AppStatus()
-
     config = vars(parser.parse_args())
     # prepare logging
     log_level = logging.ERROR
@@ -104,8 +110,12 @@ def run_program(parser):
     logger.setLevel(log_level)
     # run
     logger.debug("CLI arguments: %s", config)
-    cul_mqtt = CULMQTT(
-        config["device"],
+    # configure CUL
+    cul = CUL(config["device"], log_level=log_level)
+    cul.send("X01")
+    cul.send("krS")
+
+    mqtt = MQTT(
         config["broker"],
         mqtt_port=config["port"],
         mqtt_client_id=config["clientid"],
@@ -115,11 +125,23 @@ def run_program(parser):
         tls=config["tls"],
         ca_certs=config["ca_certs"],
         tls_insecure=config["insecure"],
+        log_level=log_level,
+    )
+    if not mqtt.connect(timeout=2):
+        logger.error("Couldn't connect to MQTT")
+        sys.exit(1)
+
+    if "sub_topic" not in config:
+        config["sub_topic"] = config["device"].split("/")[-1]
+    cul_mqtt = CULMQTT(
+        cul,
+        mqtt,
+        sub_topic=config["sub_topic"],
         delay_send=config["delayms"] / 1000.0,
         log_level=log_level,
     )
-    app_status.add_app(cul_mqtt)
     cul_mqtt.start()
+    # Service will run in background as thread
 
 
 if __name__ == "__main__":
